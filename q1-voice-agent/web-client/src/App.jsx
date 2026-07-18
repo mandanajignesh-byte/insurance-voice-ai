@@ -6,7 +6,7 @@ import {
 } from "@pipecat-ai/websocket-transport";
 import { PipecatClientProvider, PipecatClientAudio } from "@pipecat-ai/client-react";
 
-const WS_URL = "ws://localhost:7860/ws";
+const WS_URL = "wss://obscure-space-computing-machine-5gjpq6rqvgwqf7wvx-7860.app.github.dev/ws";
 
 function VoiceAgent() {
   const [status, setStatus] = useState("idle");
@@ -27,6 +27,13 @@ function VoiceAgent() {
       }),
       enableMic: true,
       enableCam: false,
+      mediaStreamConstraints: {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      },
       callbacks: {
         onConnected: () => {
           setStatus("connected");
