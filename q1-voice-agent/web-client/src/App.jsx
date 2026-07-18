@@ -15,7 +15,7 @@ function VoiceAgent() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const addMessage = (role, text) => {
-    setTranscript((prev) => [...prev, { role, text, id: Date.now() }]);
+    setTranscript((prev) => [...prev, { role, text, id: Date.now() + Math.random() }]);
   };
 
   const [client] = useState(() =>

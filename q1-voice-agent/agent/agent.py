@@ -140,7 +140,7 @@ async def run_agent(websocket: WebSocket):
 
     llm = GroqLLMService(
         api_key=GROQ_API_KEY,
-        model="llama-3.3-70b-versatile",
+        model="llama3-groq-70b-8192-tool-use-preview",
     )
 
     stt = GroqSTTService(
