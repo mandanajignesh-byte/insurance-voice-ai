@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q3 — Localized Voice Agents</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .container { width: 100%; max-width: 520px; padding: 24px; }
+  h1 { text-align: center; font-size: 18px; color: #94a3b8; margin-bottom: 20px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .tab { flex: 1; padding: 8px 4px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 12px; text-align: center; transition: all 0.2s; }
+  .tab.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+  .card { background: #1e293b; border-radius: 16px; padding: 28px; text-align: center; border: 1px solid #334155; }
+  .avatar { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+  .agent-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .agent-desc { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
+  .badge { display: inline-block; background: #334155; border-radius: 99px; padding: 3px 10px; font-size: 11px; color: #cbd5e1; margin-bottom: 20px; }
+  .status { font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+  .error { font-size: 12px; color: #f87171; margin-bottom: 12px; min-height: 18px; }
+  .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-start { background: #3b82f6; color: white; }
+  .btn-start:hover { background: #2563eb; }
+  .btn-end { background: #ef4444; color: white; }
+  .transcript { margin-top: 16px; background: #0f172a; border-radius: 10px; padding: 14px; max-height: 180px; overflow-y: auto; text-align: left; }
+  .msg { font-size: 12px; margin-bottom: 6px; line-height: 1.5; }
+  .msg.agent { color: #60a5fa; }
+  .msg.user { color: #a3e635; }
+  .msg.system { color: #64748b; font-style: italic; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .info-item { background: #0f172a; border-radius: 8px; padding: 10px; text-align: left; }
+  .info-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+  .info-value { font-size: 12px; color: #e2e8f0; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Q3 — Localized Voice Agents</h1>
+  <div class="tabs">
+    <div class="tab active" onclick="switchAgent('ph')">🇵🇭 Maya (Taglish)</div>
+    <div class="tab" onclick="switchAgent('id')">🇮🇩 Rani (Bahasa)</div>
+    <div class="tab" onclick="switchAgent('in')">🇮🇳 Kavita (Hinglish)</div>
+  </div>
+  <div class="card">
+    <div class="avatar" id="avatar" style="background:#fef3c7">🌺</div>
+    <div class="agent-name" id="agentName">Hi, I'm Maya</div>
+    <div class="agent-desc" id="agentDesc">Sun Life Philippines Renewal Specialist</div>
+    <div class="badge" id="langBadge">🗣 Taglish — Filipino + English</div>
+    <div class="status" id="status">Ready to connect</div>
+    <div class="error" id="error"></div>
+    <button class="btn btn-start" id="mainBtn" onclick="toggleCall()">📞 Start Call</button>
+    <div class="info-grid">
+      <div class="info-item"><div class="info-label">Market</div><div class="info-value" id="infoMarket">Philippines</div></div>
+      <div class="info-item"><div class="info-label">Language</div><div class="info-value" id="infoLang">Taglish</div></div>
+      <div class="info-item"><div class="info-label">ASR Model</div><div class="info-value">Whisper Large v3</div></div>
+      <div class="info-item"><div class="info-label">LLM</div><div class="info-value">Qwen 3.6-27B</div></div>
+    </div>
+    <div class="transcript" id="transcript" style="display:none"></div>
+  </div>
+</div>
+<script type="module">
+const AGENTS = {
+  ph: { name:"Hi, I'm Maya", desc:"Sun Life Philippines Renewal Specialist", lang:"🗣 Taglish — Filipino + English", avatar:"🌺", bg:"#fef3c7", port:"7861", market:"Philippines", language:"Taglish" },
+  id: { name:"Halo, Saya Rani", desc:"Agen Cicilan Adira Finance Indonesia", lang:"🗣 Bahasa Indonesia + English loanwords", avatar:"🏝", bg:"#dcfce7", port:"7862", market:"Indonesia", language:"Bahasa Indonesia" },
+  in: { name:"Namaste, Main Kavita Hun", desc:"Star Health India Renewal Specialist", lang:"🗣 Hinglish — Hindi + English", avatar:"🪷", bg:"#fce7f3", port:"7863", market:"India (Bonus)", language:"Hinglish" },
+};
+
+let current = 'ph';
+let calling = false;
+let client = null;
+
+window.switchAgent = function(agent) {
+  if (calling) return;
+  current = agent;
+  const a = AGENTS[agent];
+  document.getElementById('avatar').textContent = a.avatar;
+  document.getElementById('avatar').style.background = a.bg;
+  document.getElementById('agentName').textContent = a.name;
+  document.getElementById('agentDesc').textContent = a.desc;
+  document.getElementById('langBadge').textContent = a.lang;
+  document.getElementById('infoMarket').textContent = a.market;
+  document.getElementById('infoLang').textContent = a.language;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['ph','id','in'][i]===agent));
+  document.getElementById('transcript').style.display = 'none';
+  document.getElementById('transcript').innerHTML = '';
+  document.getElementById('error').textContent = '';
+  setStatus('Ready to connect');
+};
+
+function getWsUrl() {
+  const h = window.location.hostname;
+  const port = AGENTS[current].port;
+  if (h.includes('app.github.dev')) return `wss://${h.replace(/-\d+\.app/, `-${port}.app`)}/ws`;
+  return `ws://localhost:${port}/ws`;
+}
+
+function setStatus(s) { document.getElementById('status').textContent = s; }
+
+function addMsg(role, text) {
+  const t = document.getElementById('transcript');
+  t.style.display = 'block';
+  const d = document.createElement('div');
+  d.className = `msg ${role}`;
+  d.textContent = (role==='agent'?'🤖 ':role==='user'?'👤 ':'ℹ️ ') + text;
+  t.appendChild(d);
+  t.scrollTop = t.scrollHeight;
+}
+
+window.toggleCall = async function() {
+  if (!calling) await startCall(); else endCall();
+};
+
+async function startCall() {
+  try {
+    const { PipecatClient, PipecatClientAudio } = await import('https://cdn.jsdelivr.net/npm/@pipecat-ai/client-js@1.8.1/dist/index.mjs');
+    const { WebSocketTransport, ProtobufFrameSerializer } = await import('https://cdn.jsdelivr.net/npm/@pipecat-ai/client-js@1.8.1/dist/index.mjs');
+    setStatus('Connecting...');
+    document.getElementById('error').textContent = '';
+    client = new PipecatClient({
+      transport: new WebSocketTransport({
+        wsUrl: getWsUrl(),
+        serializer: new ProtobufFrameSerializer(),
+        recorderSampleRate: 16000,
+        playerSampleRate: 48000,
+      }),
+      enableMic: true,
+      enableCam: false,
+      mediaStreamConstraints: { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } },
+      callbacks: {
+        onConnected: () => { setStatus('Connected'); addMsg('system','Connected'); calling=true; document.getElementById('mainBtn').textContent='📵 End Call'; document.getElementById('mainBtn').className='btn btn-end'; },
+        onDisconnected: () => { setStatus('Call ended'); calling=false; document.getElementById('mainBtn').textContent='📞 Start Call'; document.getElementById('mainBtn').className='btn btn-start'; },
+        onBotText: (t) => addMsg('agent', t),
+        onUserTranscript: (t) => { if(t.final) addMsg('user', t.text); },
+        onError: (e) => { document.getElementById('error').textContent = e?.message||'Connection failed'; setStatus('Error'); },
+      }
+    });
+    await client.connect();
+  } catch(e) {
+    document.getElementById('error').textContent = e.message;
+    setStatus('Connection error');
+  }
+}
+
+function endCall() {
+  if (client) { client.disconnect(); client = null; }
+}
+</script>
+</body>
+</html>
