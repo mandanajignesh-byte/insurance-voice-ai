@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.python-version
+*.egg-info/
+dist/
+build/
+
+# uv
+.uv/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+.next/
+dist/
+build/
+
+# Data
+q2-knowledge-base/data/raw/*
+!q2-knowledge-base/data/raw/.gitkeep
+q2-knowledge-base/data/processed/*
+!q2-knowledge-base/data/processed/.gitkeep
+
+# Recordings
+q1-voice-agent/recordings/*.wav
+q1-voice-agent/recordings/*.mp3
+q3-localized/recordings/*.wav
+q3-localized/recordings/*.mp3
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qdrant local storage
+qdrant_storage/
+
+# Agent runner cache
+.agents/

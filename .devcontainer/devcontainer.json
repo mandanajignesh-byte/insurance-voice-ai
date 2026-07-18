@@ -1,0 +1,39 @@
+{
+  "name": "Insurance Voice AI",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [7860, 5173, 8000, 6333],
+  "portsAttributes": {
+    "7860": { "label": "Priya Agent", "onAutoForward": "notify" },
+    "5173": { "label": "Web Client", "onAutoForward": "openBrowser" },
+    "8000": { "label": "KB API", "onAutoForward": "silent" },
+    "6333": { "label": "Qdrant", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "dbaeumer.vscode-eslint"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/${localWorkspaceFolderBasename}/.venv/bin/python",
+        "python.analysis.indexing": false,
+        "files.watcherExclude": {
+          "**/.venv/**": true,
+          "**/node_modules/**": true,
+          "**/qdrant_storage/**": true,
+          "**/__pycache__/**": true
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "KB_API_URL": "http://localhost:8000",
+    "QDRANT_URL": "http://localhost:6333"
+  }
+}

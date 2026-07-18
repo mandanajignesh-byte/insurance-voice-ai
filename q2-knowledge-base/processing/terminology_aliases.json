@@ -1,0 +1,84 @@
+{
+    "sum insured": [
+        "coverage amount",
+        "insured amount",
+        "sum assured",
+        "si limit"
+    ],
+    "premium": [
+        "policy premium",
+        "insurance premium",
+        "annual premium",
+        "premium amount"
+    ],
+    "pre-existing disease": [
+        "pre existing disease",
+        "pre-existing condition",
+        "ped",
+        "prior condition",
+        "pre existing condition"
+    ],
+    "cashless": [
+        "cashless claim",
+        "cashless treatment",
+        "cashless facility",
+        "direct billing"
+    ],
+    "co-payment": [
+        "co-pay",
+        "copayment",
+        "copay",
+        "co payment"
+    ],
+    "waiting period": [
+        "waiting time",
+        "exclusion period",
+        "initial waiting period"
+    ],
+    "grace period": [
+        "grace days",
+        "renewal grace",
+        "grace time"
+    ],
+    "renewal": [
+        "policy renewal",
+        "renew policy",
+        "policy renew"
+    ],
+    "hospitalisation": [
+        "hospitalization",
+        "hospital admission",
+        "inpatient stay"
+    ],
+    "network hospital": [
+        "empanelled hospital",
+        "tie-up hospital",
+        "partner hospital"
+    ],
+    "claim": [
+        "insurance claim",
+        "medical claim",
+        "health claim"
+    ],
+    "sum insured restoration": [
+        "automatic restoration",
+        "restoration benefit",
+        "sum insured recharge"
+    ],
+    "no claim bonus": [
+        "ncb",
+        "no-claim bonus",
+        "loyalty bonus",
+        "cumulative bonus"
+    ],
+    "day care": [
+        "daycare",
+        "day care procedure",
+        "day care treatment"
+    ],
+    "domiciliary": [
+        "home treatment",
+        "domiciliary hospitalisation",
+        "home care treatment"
+    ]
+}
