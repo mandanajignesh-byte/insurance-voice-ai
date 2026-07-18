@@ -21,7 +21,7 @@ from pipecat.processors.aggregators.llm_response_universal import LLMContextAggr
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
-from pipecat.services.groq.tts import GroqTTSService
+from pipecat.services.cartesia.tts import CartesiaTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.serializers.protobuf import ProtobufFrameSerializer
 from pipecat.transports.websocket.fastapi import (
@@ -148,10 +148,9 @@ async def run_agent(websocket: WebSocket):
         model="whisper-large-v3",
     )
 
-    tts = GroqTTSService(
-        api_key=GROQ_API_KEY,
-        voice_id="diana",
-        model_name="canopylabs/orpheus-v1-english",
+    tts = CartesiaTTSService(
+        api_key=os.getenv("CARTESIA_API_KEY"),
+        voice_id="248be419-c632-4f23-adf1-5324ed7dbf1d",
         sample_rate=48000,
     )
 
