@@ -6,7 +6,9 @@ import {
 } from "@pipecat-ai/websocket-transport";
 import { PipecatClientProvider, PipecatClientAudio } from "@pipecat-ai/client-react";
 
-const WS_URL = "wss://obscure-space-computing-machine-5gjpq6rqvgwqf7wvx-7860.app.github.dev/ws";
+const WS_URL = window.location.hostname.includes("app.github.dev")
+  ? `wss://${window.location.hostname.replace("-5173.", "-7860.")}/ws`
+  : "ws://localhost:7860/ws";
 
 function VoiceAgent() {
   const [status, setStatus] = useState("idle");
