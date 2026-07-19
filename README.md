@@ -2,7 +2,7 @@
 
 **Candidate:** Jignesh Mandana | IIIT Nagpur | AmberFlux EdgeAI
 **Repo:** https://github.com/mandanajignesh-byte/insurance-voice-ai
-**Demo Video:** [Add Loom link here]
+**Demo Video:** [▶ Watch Demo on Loom](https://www.loom.com/share/04a69460f467484cbba4d0e5e0dde05c)
 
 ---
 
