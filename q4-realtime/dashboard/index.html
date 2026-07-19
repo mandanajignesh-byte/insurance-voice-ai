@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q4 — Live Call Insights</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; }
+header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 18px; font-weight: 700; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; margin-right: 6px; }
+.dot.connected { background: #22c55e; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto; }
+.panel { background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; }
+.panel-header { padding: 14px 16px; border-bottom: 1px solid #334155; font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; }
+.upload-area { padding: 24px; text-align: center; }
+.upload-area p { color: #64748b; font-size: 13px; margin-bottom: 16px; }
+input[type=file] { display: none; }
+.btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #3b82f6; color: white; }
+.btn-primary:hover { background: #2563eb; }
+.btn-secondary { background: #334155; color: #cbd5e1; margin-left: 8px; }
+.btn-secondary:hover { background: #475569; }
+.status-bar { padding: 10px 16px; background: #0f172a; font-size: 12px; color: #64748b; border-top: 1px solid #334155; }
+.transcript-box { padding: 16px; height: 280px; overflow-y: auto; font-size: 12px; line-height: 1.8; color: #94a3b8; font-family: monospace; }
+.nudges-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; }
+.nudge-card { border-radius: 10px; padding: 14px; border-left: 4px solid; animation: slideIn 0.3s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.nudge-card.missed_cross_sell { background: #1e3a5f; border-color: #3b82f6; }
+.nudge-card.compliance_gap { background: #450a0a; border-color: #ef4444; }
+.nudge-card.rising_frustration { background: #431407; border-color: #f97316; }
+.nudge-card.buying_signal { background: #052e16; border-color: #22c55e; }
+.nudge-card.payment_difficulty { background: #2e1065; border-color: #a855f7; }
+.nudge-card.system { background: #1e293b; border-color: #475569; }
+.nudge-card.error { background: #450a0a; border-color: #ef4444; }
+.nudge-type { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; margin-bottom: 4px; }
+.nudge-text { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.nudge-meta { font-size: 11px; opacity: 0.5; display: flex; justify-content: space-between; }
+.confidence-bar { height: 3px; border-radius: 2px; background: #334155; margin-top: 8px; }
+.confidence-fill { height: 100%; border-radius: 2px; background: #22c55e; transition: width 0.3s; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; }
+.stat { background: #0f172a; border-radius: 8px; padding: 10px; }
+.stat-value { font-size: 22px; font-weight: 700; }
+.stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+.empty { padding: 40px; text-align: center; color: #475569; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ Q4 — Live Call Insights Dashboard</h1>
+  <div style="display:flex;align-items:center;font-size:13px;color:#94a3b8">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">Disconnected</span>
+  </div>
+</header>
+
+<div class="layout">
+  <div>
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-header">
+        Upload Call Recording
+        <span id="analysisStatus" style="font-size:11px;color:#22c55e"></span>
+      </div>
+      <div class="upload-area">
+        <p>Upload a WAV recording from Q1 or Q3 to start real-time analysis</p>
+        <input type="file" id="fileInput" accept=".wav" onchange="uploadFile()">
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📂 Choose WAV File</button>
+        <button class="btn btn-secondary" onclick="clearAll()">🗑 Clear</button>
+      </div>
+      <div class="status-bar" id="statusBar">Ready — waiting for file upload</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        Live Transcript
+        <span id="chunkCount" style="font-size:11px;color:#475569">0 chunks</span>
+      </div>
+      <div class="transcript-box" id="transcriptBox">
+        <span style="color:#475569">Transcript will appear here as the call is analyzed...</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-header">Stats</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-value" id="statNudges">0</div><div class="stat-label">Nudges Generated</div></div>
+        <div class="stat"><div class="stat-value" id="statChunks">0</div><div class="stat-label">Audio Chunks</div></div>
+        <div class="stat"><div class="stat-value" id="statP50">—</div><div class="stat-label">Avg Latency</div></div>
+        <div class="stat"><div class="stat-value" id="statSignals">0</div><div class="stat-label">Signals Found</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        Live Nudges
+        <span id="nudgeCount" style="font-size:11px;color:#475569">0 nudges</span>
+      </div>
+      <div class="nudges-list" id="nudgesList">
+        <div class="empty">Nudges will appear here in real-time...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let ws = null;
+let nudgeCount = 0;
+let chunkCount = 0;
+let latencies = [];
+
+function getWsUrl() {
+  const h = window.location.hostname;
+  if (h.includes('app.github.dev')) return `wss://${h.replace(/-\d+\.app/, '-7864.app')}/ws/nudges`;
+  return 'ws://localhost:7864/ws/nudges';
+}
+
+function getApiUrl() {
+  const h = window.location.hostname;
+  if (h.includes('app.github.dev')) return `https://${h.replace(/-\d+\.app/, '-7864.app')}`;
+  return 'http://localhost:7864';
+}
+
+function connect() {
+  ws = new WebSocket(getWsUrl());
+  ws.onopen = () => {
+    document.getElementById('statusDot').className = 'dot connected';
+    document.getElementById('statusText').textContent = 'Connected';
+  };
+  ws.onclose = () => {
+    document.getElementById('statusDot').className = 'dot';
+    document.getElementById('statusText').textContent = 'Disconnected';
+    setTimeout(connect, 3000);
+  };
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    handleNudge(data);
+  };
+}
+
+function handleNudge(data) {
+  const { signal_type, nudge, confidence, timestamp, transcript_excerpt } = data;
+
+  if (signal_type === 'transcript') {
+    const box = document.getElementById('transcriptBox');
+    if (chunkCount === 0) { box.innerHTML = ''; }
+    chunkCount++;
+    const p = document.createElement('p');
+    p.style.cssText = 'margin-bottom:8px;font-size:12px;line-height:1.6;';
+    p.innerHTML = `<span style="color:#475569">[${new Date(timestamp*1000).toLocaleTimeString()}]</span> ${transcript_excerpt}`;
+    box.appendChild(p);
+    box.scrollTop = box.scrollHeight;
+    document.getElementById('chunkCount').textContent = chunkCount + ' chunks';
+    document.getElementById('statChunks').textContent = chunkCount;
+    return;
+  }
+
+  if (signal_type === 'system' || signal_type === 'error') {
+    document.getElementById('statusBar').textContent = nudge;
+    if (signal_type === 'system') document.getElementById('analysisStatus').textContent = '✓ Complete';
+    return;
+  }
+
+  // Add nudge card
+  nudgeCount++;
+  const latencyMs = data.delivered_at && timestamp ? Math.round((data.delivered_at - timestamp) * 1000) : null;
+  if (latencyMs) latencies.push(latencyMs);
+
+  const list = document.getElementById('nudgesList');
+  if (list.querySelector('.empty')) list.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = `nudge-card ${signal_type}`;
+  card.innerHTML = `
+    <div class="nudge-type">${signal_type.replace(/_/g,' ')}</div>
+    <div class="nudge-text">💡 ${nudge}</div>
+    <div class="nudge-meta">
+      <span>${new Date(timestamp*1000).toLocaleTimeString()}</span>
+      <span>${Math.round(confidence*100)}% confidence${latencyMs ? ` · ${latencyMs}ms` : ''}</span>
+    </div>
+    <div class="confidence-bar"><div class="confidence-fill" style="width:${confidence*100}%"></div></div>
+  `;
+  list.insertBefore(card, list.firstChild);
+
+  document.getElementById('nudgeCount').textContent = `${nudgeCount} nudges`;
+  document.getElementById('statNudges').textContent = nudgeCount;
+  document.getElementById('statSignals').textContent = nudgeCount;
+
+  if (latencies.length > 0) {
+    const avg = Math.round(latencies.reduce((a,b)=>a+b,0)/latencies.length);
+    document.getElementById('statP50').textContent = `${avg}ms`;
+  }
+}
+
+async function uploadFile() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) return;
+  document.getElementById('statusBar').textContent = `Uploading ${file.name}...`;
+  document.getElementById('analysisStatus').textContent = '⏳ Analyzing...';
+
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const resp = await fetch(`${getApiUrl()}/analyze`, { method: 'POST', body: form });
+    const data = await resp.json();
+    document.getElementById('statusBar').textContent = `Analyzing: ${file.name} — nudges will appear in real-time`;
+  } catch(e) {
+    document.getElementById('statusBar').textContent = `Error: ${e.message}`;
+  }
+}
+
+function clearAll() {
+  nudgeCount = 0; chunkCount = 0; latencies = [];
+  document.getElementById('nudgesList').innerHTML = '<div class="empty">Nudges will appear here in real-time...</div>';
+  document.getElementById('transcriptBox').innerHTML = '<span style="color:#475569">Transcript will appear here...</span>';
+  document.getElementById('statNudges').textContent = '0';
+  document.getElementById('statChunks').textContent = '0';
+  document.getElementById('statP50').textContent = '—';
+  document.getElementById('statSignals').textContent = '0';
+  document.getElementById('nudgeCount').textContent = '0 nudges';
+  document.getElementById('chunkCount').textContent = '0 chunks';
+  document.getElementById('analysisStatus').textContent = '';
+  document.getElementById('statusBar').textContent = 'Ready — waiting for file upload';
+}
+
+connect();
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@ from loguru import logger
 
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import LLMContextFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -195,7 +196,14 @@ async def run_agent(websocket: WebSocket):
             await params.result_callback(f"Lead saved for {arguments.get('name')}.")
 
     llm.register_function(None, handle_tool_call)
-    vad = VADProcessor(vad_analyzer=SileroVADAnalyzer())
+    vad = VADProcessor(vad_analyzer=SileroVADAnalyzer(
+        params=VADParams(
+            confidence=0.8,
+            start_secs=0.3,
+            stop_secs=0.5,
+            min_volume=0.75,
+        )
+    ))
 
     pipeline = Pipeline(
         [
