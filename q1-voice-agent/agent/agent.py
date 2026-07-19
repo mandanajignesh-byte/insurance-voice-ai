@@ -32,6 +32,40 @@ from pipecat.transports.websocket.fastapi import (
 
 load_dotenv()
 
+Q4_URL = os.getenv("Q4_URL", "http://localhost:7864")
+
+class AudioTap:
+    """Taps into pipeline audio and forwards 3s chunks to Q4 in real-time."""
+    def __init__(self, q4_url):
+        self._q4_url = q4_url
+        self._buffer = bytearray()
+        self._chunk_size = 16000 * 2 * 3
+
+    async def send(self, audio_bytes):
+        self._buffer.extend(audio_bytes)
+        while len(self._buffer) >= self._chunk_size:
+            chunk = bytes(self._buffer[:self._chunk_size])
+            self._buffer = self._buffer[self._chunk_size:]
+            asyncio.create_task(self._post(chunk))
+
+    async def _post(self, chunk):
+        try:
+            import io, wave, aiohttp
+            buf = io.BytesIO()
+            with wave.open(buf, "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(16000)
+                wf.writeframes(chunk)
+            buf.seek(0)
+            async with aiohttp.ClientSession() as s:
+                data = aiohttp.FormData()
+                data.add_field("file", buf, filename="chunk.wav", content_type="audio/wav")
+                await s.post(f"{self._q4_url}/analyze_chunk", data=data,
+                             timeout=aiohttp.ClientTimeout(total=5))
+        except Exception as e:
+            logger.debug(f"AudioTap: {e}")
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 KB_API_URL = os.getenv("KB_API_URL", "http://localhost:8000")
 
@@ -205,6 +239,7 @@ async def run_agent(websocket: WebSocket):
         )
     ))
 
+    audio_tap = AudioTap(Q4_URL)
     pipeline = Pipeline(
         [
             transport.input(),
@@ -225,6 +260,20 @@ async def run_agent(websocket: WebSocket):
             audio_out_sample_rate=48000,
         ),
     )
+
+    @stt.event_handler("on_transcription_message")
+    async def on_transcript(stt, message):
+        text = message.get("text", "").strip()
+        if text:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    await session.post(
+                        f"{Q4_URL}/analyze_text",
+                        json={"text": text, "speaker": "user"},
+                        timeout=aiohttp.ClientTimeout(total=3)
+                    )
+            except Exception as e:
+                logger.debug(f"Q4 forward failed: {e}")
 
     @transport.event_handler("on_client_connected")
     async def on_connected(transport, client):
@@ -271,7 +320,8 @@ if WEB_CLIENT_DIR.exists():
 
 if __name__ == "__main__":
     import uvicorn
-
+if __name__ == "__main__":
+    import uvicorn
     logger.info(f"KB API: {KB_API_URL}")
     logger.info("Web client dev: http://localhost:5173")
     uvicorn.run(app, host="0.0.0.0", port=7860)

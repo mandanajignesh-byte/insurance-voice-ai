@@ -6,6 +6,18 @@ import {
 } from "@pipecat-ai/websocket-transport";
 import { PipecatClientProvider, PipecatClientAudio } from "@pipecat-ai/client-react";
 
+const getQ4Url = () => {
+  const h = window.location.hostname;
+  if (h.includes('app.github.dev')) return `https://${h.replace(/-\d+\.app/, '-7864.app')}`;
+  return 'http://localhost:7864';
+};
+const forwardToQ4 = (text, speaker) => {
+  fetch(`${getQ4Url()}/analyze_text`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text, speaker})
+  }).catch(() => {});
+};
 const WS_URL = window.location.hostname.includes("app.github.dev")
   ? `wss://${window.location.hostname.replace("-5173.", "-7860.")}/ws`
   : "ws://localhost:7860/ws";
@@ -86,10 +98,10 @@ function VoiceAgent() {
           setMicLevel(level);
         },
         onUserTranscript: (data) => {
-          if (data.final) addMessage("user", data.text);
+          if (data.final) { addMessage("user", data.text); forwardToQ4(data.text, "user"); }
         },
         onBotTranscript: (data) => {
-          addMessage("agent", data.text);
+          addMessage("agent", data.text); forwardToQ4(data.text, "agent");
         },
         onError: (err) => {
           console.error("Error:", err);

@@ -12,15 +12,16 @@ from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.frames.frames import LLMContextFrame
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
 from pipecat.processors.audio.vad_processor import VADProcessor
-from pipecat.processors.frameworks.rtvi import RTVIProcessor
 from pipecat.serializers.protobuf import ProtobufFrameSerializer
 from pipecat.services.cartesia.tts import CartesiaTTSService
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
-from pipecat.services.llm_service import FunctionSchema
-from pipecat.transports.network.fastapi_websocket import (
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketParams,
     FastAPIWebsocketTransport,
 )
@@ -138,14 +139,13 @@ async def websocket_endpoint(websocket: WebSocket):
         {"role": "user", "content": "Batiin ang customer at ipakilala ang iyong sarili."},
     ]
 
-    context = OpenAILLMContext(messages=messages, tools=TOOLS)
-    context_aggregator = llm.create_context_aggregator(context)
+    context = LLMContext(messages, TOOLS)
+    context_aggregator = LLMContextAggregatorPair(context)
 
     vad = VADProcessor(vad_analyzer=SileroVADAnalyzer(
         params=VADParams(confidence=0.8, start_secs=0.3, stop_secs=0.5, min_volume=0.75)
     ))
 
-    rtvi = RTVIProcessor()
 
     pipeline = Pipeline([
         transport.input(),
@@ -163,7 +163,7 @@ async def websocket_endpoint(websocket: WebSocket):
     @transport.event_handler("on_client_connected")
     async def on_connected(transport, client):
         logger.info("Maya: client connected")
-        await task.queue_frames([context_aggregator.user().get_context_frame()])
+        await task.queue_frames([LLMContextFrame(context)])
 
     @transport.event_handler("on_client_disconnected")
     async def on_disconnected(transport, client):
